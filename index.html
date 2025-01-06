@@ -3,12 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive Map</title>
+  <title>Redesigned Interactive Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     #map {
       height: 100vh; /* Fullscreen height */
       width: 100%; /* Fullscreen width */
+    }
+    .legend {
+      background: white;
+      line-height: 1.5em;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    }
+    .legend i {
+      width: 20px;
+      height: 10px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
     }
   </style>
 </head>
@@ -24,38 +38,40 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // Define a color scale function
+    function getColor(value) {
+      return value > 1000000000 ? '#ffcc00' : // Yellow
+             value > 1000000    ? '#ff6600' : // Orange
+             value > 10000      ? '#66ccff' : // Light Blue
+             value > 1000       ? '#0099cc' : // Medium Blue
+             value > 0          ? '#003366' : // Dark Blue
+                                   '#cccccc'; // Grey (no data)
+    }
+
     // Fetch and add GeoJSON and data
     Promise.all([
       fetch('./random_country_data_with_colors.json').then(res => res.json()),
       fetch('./countries.geojson').then(res => res.json())
     ]).then(([countryData, geoJsonData]) => {
+      // Create a mapping of country names to their data
       const countryDataMap = Object.fromEntries(countryData.map(c => [c.country, c]));
 
+      // Add GeoJSON layer with styling
       L.geoJson(geoJsonData, {
         style: feature => {
           const countryName = feature.properties.ADMIN;
           const countryInfo = countryDataMap[countryName];
-
-          if (countryInfo) {
-            return {
-              fillColor: countryInfo.color, // Apply the color from JSON
-              color: "black", // Border color
-              weight: 1,
-              fillOpacity: 0.7
-            };
-          } else {
-            return {
-              fillColor: "grey", // Default color for countries with no data
-              color: "black",
-              weight: 1,
-              fillOpacity: 0.5
-            };
-          }
+          const value = countryInfo ? countryInfo.registered : 0; // Use 'registered' as the value
+          return {
+            fillColor: getColor(value),
+            color: "black", // Border color
+            weight: 1,
+            fillOpacity: 0.8
+          };
         },
         onEachFeature: (feature, layer) => {
           const countryName = feature.properties.ADMIN;
           const countryInfo = countryDataMap[countryName];
-
           if (countryInfo) {
             layer.bindPopup(`
               <strong>${countryInfo.country}</strong><br>
@@ -68,6 +84,27 @@
           }
         }
       }).addTo(map);
+
+      // Add legend
+      const legend = L.control({ position: 'bottomright' });
+
+      legend.onAdd = function () {
+        const div = L.DomUtil.create('div', 'legend');
+        const grades = [0, 1000, 10000, 1000000, 1000000000];
+        const labels = [];
+
+        // Loop through intervals and generate legend labels
+        for (let i = 0; i < grades.length; i++) {
+          div.innerHTML +=
+            '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+            (grades[i] ? `$${grades[i].toLocaleString()}` : 'No data') +
+            (grades[i + 1] ? ` &ndash; $${grades[i + 1].toLocaleString()}<br>` : '+');
+        }
+
+        return div;
+      };
+
+      legend.addTo(map);
     }).catch(error => {
       console.error('Error loading data:', error);
     });
