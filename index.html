@@ -3,15 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive Map with Colors and Popups</title>
+  <title>Interactive Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     #map {
       height: 100vh; /* Fullscreen height */
-      width: 100%;
-    }
-    .leaflet-popup-content {
-      font-size: 14px;
+      width: 100%; /* Fullscreen width */
     }
   </style>
 </head>
@@ -20,22 +17,20 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // Initialize the map
-    const map = L.map('map').setView([20, 0], 2); // Centered globally
+    const map = L.map('map').setView([20, 0], 2); // Global view
 
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Load country data and GeoJSON boundaries
+    // Fetch and add GeoJSON and data
     Promise.all([
       fetch('./random_country_data_with_colors.json').then(res => res.json()),
       fetch('./countries.geojson').then(res => res.json())
     ]).then(([countryData, geoJsonData]) => {
-      // Create a mapping of country names to their data
       const countryDataMap = Object.fromEntries(countryData.map(c => [c.country, c]));
 
-      // Add GeoJSON layer
       L.geoJson(geoJsonData, {
         style: feature => {
           const countryName = feature.properties.ADMIN;
@@ -43,14 +38,14 @@
 
           if (countryInfo) {
             return {
-              fillColor: countryInfo.color, // Use the color from the JSON
+              fillColor: countryInfo.color, // Apply the color from JSON
               color: "black", // Border color
               weight: 1,
               fillOpacity: 0.7
             };
           } else {
             return {
-              fillColor: "grey", // Default color for countries without data
+              fillColor: "grey", // Default color for countries with no data
               color: "black",
               weight: 1,
               fillOpacity: 0.5
